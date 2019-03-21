@@ -1,1 +1,1 @@
-gan network using tf.nn on cifar10
+gan network using tf.nn from scratch on cifar10
