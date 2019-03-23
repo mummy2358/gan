@@ -62,6 +62,22 @@ def acc(label,pred):
 	res=correct/len(label)
 	return res
 
+def truncate_imgs(imgs):
+	# convert image matrices to uint8 and truncate to 0-255
+	tr=np.array(imgs)
+	tr=np.clip(imgs,a_min=0,a_max=255)
+	tr=np.uint8(tr)
+	tr.astype(np.uint8)
+	return tr
+
+def normalize01(inputs,maxv=255,minv=0):
+	inputs=np.array(inputs)
+	if maxv>minv:
+		res=(inputs-minv)/(maxv-minv)
+		return res
+	else:
+		print("invalid given maxv and minv")
+
 class generator:
 	def __init__(self,name="G"):
 		# feed forward neural network used for generating image samples
@@ -72,11 +88,13 @@ class generator:
 		# directly define struct by hand for experiments
 		# later should be generalized to random structure
 		with tf.variable_scope(self.name,reuse=tf.AUTO_REUSE):
-			fc1=fc_layer(inputs,units=10,name="fc1")
-			fc2=fc_layer(fc1,units=32*32*10,name="fc2")
-			fc2_re=tf.reshape(fc2,shape=[-1,32,32,10],name="reshape")
+			fc1=fc_layer(inputs,units=192,name="fc1")
+			fc2=fc_layer(fc1,units=8*8*3,name="fc2")
+			fc2_re=tf.reshape(fc2,shape=[-1,8,8,3],name="reshape")
+			fc2_re=tf.image.resize_images(fc2_re,[16,16])
 			conv1=conv2d_layer(fc2_re,kernel_size=3,filters=64,strides=[1,1],activation=tf.nn.relu,name="conv1")
 			conv2=conv2d_layer(conv1,kernel_size=3,filters=64,strides=[1,1],activation=tf.nn.relu,name="conv2")
+			conv2=tf.image.resize_images(conv2,[32,32])
 			conv3=conv2d_layer(conv2,kernel_size=3,filters=64,strides=[1,1],activation=tf.nn.relu,name="conv3")
 			conv4=conv2d_layer(conv3,kernel_size=3,filters=3,strides=[1,1],activation=tf.nn.relu,name="conv4")
 			return conv4
@@ -92,8 +110,11 @@ class discriminator:
 		with tf.variable_scope(self.name,reuse=tf.AUTO_REUSE):
 			conv1=conv2d_layer(inputs,kernel_size=3,filters=64,strides=[1,1],activation=tf.nn.relu,name="conv1")
 			conv2=conv2d_layer(conv1,kernel_size=3,filters=64,strides=[1,1],activation=tf.nn.relu,name="conv2")
+			conv2=tf.nn.max_pool(conv2,ksize=[1,2,2,1],strides=[1,2,2,1],padding="SAME")
 			conv3=conv2d_layer(conv2,kernel_size=3,filters=64,strides=[1,1],activation=tf.nn.relu,name="conv3")
-			fc1=fc_layer(conv3,units=10,activation=tf.nn.sigmoid,name="fc1")
+			conv4=conv2d_layer(conv3,kernel_size=3,filters=64,strides=[1,1],activation=tf.nn.relu,name="conv4")
+			conv4=tf.nn.max_pool(conv4,ksize=[1,2,2,1],strides=[1,2,2,1],padding="SAME")
+			fc1=fc_layer(conv3,units=100,activation=tf.nn.sigmoid,name="fc1")
 			fc2=fc_layer(fc1,units=1,activation=tf.nn.sigmoid,name="fc2")
 			return fc2
 
@@ -102,7 +123,7 @@ class gan:
 		self.name=name
 		with tf.variable_scope(self.name,reuse=tf.AUTO_REUSE):
 			self.x=tf.placeholder(shape=[None,32,32,3],dtype=tf.float32)
-			self.z=tf.placeholder(shape=[None,10],dtype=tf.float32)
+			self.z=tf.placeholder(shape=[None,100],dtype=tf.float32)
 			self.D=discriminator(name="D")
 			self.G=generator(name="G")
 			self.build()
@@ -114,17 +135,18 @@ class gan:
 		self.D_loss=tf.reduce_mean(tf.log(self.D.forward(self.x))+tf.log(1-self.D.forward(self.G.forward(self.z))))
 		self.G_loss_pre=tf.reduce_mean(self.D.forward(self.G.forward(self.z)))
 		self.G_loss_post=tf.reduce_mean(tf.log(1-self.D.forward(self.G.forward(self.z))))
-		self.test_term1=tf.reduce_mean(tf.log(self.D.forward(self.G.forward(self.z))))
-		self.test_term2=tf.reduce_mean(tf.log(self.D.forward(self.x)))
+		
+		self.test_term1=tf.reduce_mean(self.D.forward(self.x))		
+		self.test_term2=tf.reduce_mean(self.D.forward(self.G.forward(self.z)))
 		self.img=self.G.forward(self.z)
 		self.pred=self.D.forward(self.x)
 
 gan0=gan(name="gan0")
 
 
-D_train_step=tf.train.AdamOptimizer(learning_rate=1e-4).minimize(-gan0.D_loss,var_list=tf.trainable_variables(scope=gan0.name+"/D"))
-G_train_step_pre=tf.train.AdamOptimizer(learning_rate=1e-4).minimize(-gan0.G_loss_pre,var_list=tf.trainable_variables(scope=gan0.name+"/G"))
-G_train_step_post=tf.train.AdamOptimizer(learning_rate=1e-4).minimize(gan0.G_loss_post,var_list=tf.trainable_variables(scope=gan0.name+"/G"))
+D_train_step=tf.train.AdamOptimizer(learning_rate=5e-6).minimize(-gan0.D_loss,var_list=tf.trainable_variables(scope=gan0.name+"/D"))
+G_train_step_pre=tf.train.AdamOptimizer(learning_rate=1e-3).minimize(-gan0.G_loss_pre,var_list=tf.trainable_variables(scope=gan0.name+"/G"))
+G_train_step_post=tf.train.AdamOptimizer(learning_rate=1e-3).minimize(gan0.G_loss_post,var_list=tf.trainable_variables(scope=gan0.name+"/G"))
 
 init=tf.global_variables_initializer()
 
@@ -147,24 +169,28 @@ save_iter=200
 train_num=45000
 batch_size=100
 batch_per_epoch=train_num//batch_size
-max_epoch=10000
+max_epoch=100000
 sess=tf.Session()
 sess.run(init)
 
-div_epoch=5000
-k=1
+div_epoch=30000
+d=1
+g=10
 
-test_epoch=100
+test_epoch=1000
 test_num=3
 
 random_ratio=1
+
+term1_list=[]
+term2_list=[]
 
 print("trainable variables:")
 print(tf.trainable_variables(scope=gan0.name+"/D"))
 print(tf.trainable_variables(scope=gan0.name+"/G"))
 
 
-if restore_epoch:
+if restore_epoch>1:
 	print("restoring model...")
 	saver.restore(sess,savedir+"/epoch_"+str(restore_epoch)+".ckpt")
 
@@ -172,42 +198,50 @@ if restore_epoch:
 for e in range(restore_epoch,max_epoch):
 	print("*************")
 	print("epoch "+str(e+1)+":")
-	for i in range(k):
+	if not (e+1)%test_epoch:
+		r=np.random.rand(test_num,*gan0.z.get_shape()[1:])
+		img=sess.run(gan0.img,feed_dict={gan0.z:r})
+		# convert 0-1 images back to 0-255
+		tr=img*255
+		tr=truncate_imgs(tr)
+		for i in range(test_num):
+			cv2.imshow("win0",tr[i])
+			cv2.waitKey()
+			cv2.destroyAllWindows()
+	for i in range(d):
 		# update discriminator
 		# k is the times of updating discriminator
 		batch=next(loader0_iterator)
 		batch_x=batch[0]
+		batch_x=normalize01(batch_x)
 		batch_z=np.random.rand(*[len(batch_x),*gan0.z.get_shape()[1:]])
 		batch_z=batch_z*random_ratio
 		
-		_,batch_D_loss=sess.run([D_train_step,gan0.D_loss],feed_dict={gan0.x:batch_x,gan0.z:batch_z})
-		print("batch_D_loss: "+str(batch_D_loss))
+		sess.run(D_train_step,feed_dict={gan0.x:batch_x,gan0.z:batch_z})
+	for j in range(g):
+		# update generator G
+		batch_z=np.random.rand(*[batch_size,*gan0.z.get_shape()[1:]])
+		batch_z=batch_z*random_ratio
+		if e<div_epoch:
+			# use G_loss_pre here
+			_,batch_G_loss_pre=sess.run([G_train_step_pre,gan0.G_loss_pre],feed_dict={gan0.z:batch_z})
+		else:
+			# use G_loss_post here
+			_,batch_G_loss_post=sess.run([G_train_step_post,gan0.G_loss_post],feed_dict={gan0.z:batch_z})
+		if e<div_epoch:
+			print("batch_G_loss_pre: "+str(batch_G_loss_pre))
+		else:
+			print("batch_G_loss_post: "+str(batch_G_loss_post))
+	# calculate loss after one complete epoch
 	
-	# update generator G
-	batch_z=np.random.rand(*[batch_size,*gan0.z.get_shape()[1:]])
-	batch_z=batch_z*random_ratio
-	print(np.shape(batch_z))
-	if e<div_epoch:
-		# use G_loss_pre here
-		_,batch_G_loss_pre=sess.run([G_train_step_pre,gan0.G_loss_pre],feed_dict={gan0.z:batch_z})
-		print("batch_G_loss_pre: "+str(batch_G_loss_pre))
-		term1,term2=sess.run([gan0.test_term1,gan0.test_term2],feed_dict={gan0.z:batch_z,gan0.x:batch_x})
-		print("term1: "+str(term1))
-		print("term2: "+str(term2))
-	else:
-		# use G_loss_post here
-		_,batch_G_loss_post=sess.run([G_train_step_post,gan0.G_loss_post],feed_dict={gan0.z:batch_z})
-		print("batch_G_loss_post: "+str(batch_G_loss_post))
-	#writer = tf.summary.FileWriter("./output", sess.graph)	
+	term1,term2=sess.run([gan0.test_term1,gan0.test_term2],feed_dict={gan0.z:batch_z,gan0.x:batch_x})
+	term1_list.append(term1)
+	term2_list.append(term2)
+	print("term1: "+str(term1))
+	print("term2: "+str(term2))
+	# writer = tf.summary.FileWriter("./output", sess.graph)	
 	if not (e+1)%save_iter:
 		print("saving model...")
 		saver.save(sess,savedir+"/epoch_"+str(e+1)+".ckpt")
-	if not (e+1)%test_epoch:
-	
-		r=np.random.rand(test_num,*gan0.z.get_shape()[1:])
-		img=sess.run(gan0.img,feed_dict={gan0.z:r})
-		for i in range(test_num):
-			cv2.imshow("win0",img[i])
-			cv2.waitKey()
-			cv2.destroyAllWindows()
-
+		np.save("./term1.npy",np.array(term1_list))
+		np.save("./term2.npy",np.array(term2_list))
