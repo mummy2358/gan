@@ -18,5 +18,5 @@ outputs of DCGAN after 100 epochs:
 ![test2_n](https://github.com/mummy2358/gan/blob/master/test2.png)
 ![test3_n](https://github.com/mummy2358/gan/blob/master/test3.png)
 
-The "same output" problem comes from np.random.rand() generated inputs which is substituted with np.random.uniform()
+The "same output" problem comes from np.random.rand() generated inputs which is not smooth and substituted with np.random.uniform()
 
