@@ -12,8 +12,8 @@ I tried both the fully connected and convolutional version models of the origina
 
 Also tried out DCGAN, seems easily get into mode collapse. And all of them end up with too strong descriminator ( D(x)->1 and D(G(z))->0 ).
 ______________________
-latest update:
-outputs of DCGAN after 100 epochs:
+**latest update:
+outputs of DCGAN after 100 epochs:**
 ![test1_n](https://github.com/mummy2358/gan/blob/master/test1.png)
 ![test2_n](https://github.com/mummy2358/gan/blob/master/test2.png)
 ![test3_n](https://github.com/mummy2358/gan/blob/master/test3.png)
