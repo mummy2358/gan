@@ -18,5 +18,6 @@ outputs of DCGAN after 100 epochs:
 ![test2_n](https://github.com/mummy2358/gan/blob/master/test2.png)
 ![test3_n](https://github.com/mummy2358/gan/blob/master/test3.png)
 
-The "same output" problem comes from np.random.rand() generated inputs which is not smooth and substituted with np.random.uniform()
+The "same output" problem comes from the input range of the random vector "z". Changing from \[0,1] to \[-1,1] solves everything.
 
+Besides, the probability of descriminator judging real images as real is always high as 0.9 or so through the training process.
