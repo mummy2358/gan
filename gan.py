@@ -324,7 +324,10 @@ for e in range(restore_epoch,max_epoch):
 	# writer = tf.summary.FileWriter("./output", sess.graph)	
 	if not (e+1)%save_iter:
 		print("saving model...")
-		saver.save(sess,savedir+"/epoch_"+str(e+1)+".ckpt")
+		if os.path.exists(savedir):
+			saver.save(sess,savedir+"/epoch_"+str(e+1)+".ckpt")
+		else:
+			os.system("mkdir "+savedir)
 		np.save("./term1.npy",np.array(term1_list))
 		np.save("./term2.npy",np.array(term2_list))
 		np.save("./D_loss.npy",np.array(D_loss_list))
