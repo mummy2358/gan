@@ -19,7 +19,8 @@ outputs of DCGAN after 100 epochs:**
 ![test3_n](https://github.com/mummy2358/gan/blob/master/test3.png)
 
 **generated images after 69500 iterations (one batch per iteration, so 69500 is around 695 epochs):
-![https://github.com/mummy2358/gan/blob/master/test100_epoch69500.png]
+
+![test100_695epoch](https://github.com/mummy2358/gan/blob/master/test100_epoch69500.png)
 
 The "same output" problem comes from the input range of the random vector "z". Changing from \[0,1] to \[-1,1] solves everything.
 
