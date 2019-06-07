@@ -18,7 +18,7 @@ outputs of DCGAN after 100 epochs:**
 ![test2_n](https://github.com/mummy2358/gan/blob/master/test2.png)
 ![test3_n](https://github.com/mummy2358/gan/blob/master/test3.png)
 
-**generated images after 69500 iterations (one batch per iteration, so 69500 is around 695 epochs):
+**generated images after 69500 iterations (one batch per iteration, so 69500 is around 695 epochs):**
 
 ![test100_695epoch](https://github.com/mummy2358/gan/blob/master/test100_epoch69500.png)
 
