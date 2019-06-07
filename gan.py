@@ -228,7 +228,7 @@ test_dataset=loader0.load_test()
 savedir="./models"
 saver=tf.train.Saver()
 # default epoch should be set to 0; otherwise start from the given
-restore_epoch=37500
+restore_epoch=50000
 save_iter=500
 
 
@@ -257,10 +257,16 @@ print("trainable variables:")
 print(tf.trainable_variables(scope=gan0.name+"/D"))
 print(tf.trainable_variables(scope=gan0.name+"/G"))
 
+# save meta info into file
+namedict={"outputs":gan0.img.name,"inputs":gan0.z.name}
+print(namedict)
+np.save("./namedict.npy",namedict)
+
 
 if restore_epoch>1:
 	print("restoring model...")
-	saver.restore(sess,savedir+"/epoch_"+str(restore_epoch)+".ckpt")
+	if os.path.exists(savedir):
+		saver.restore(sess,savedir+"/epoch_"+str(restore_epoch)+".ckpt")
 
 ## start training
 for e in range(restore_epoch,max_epoch):
