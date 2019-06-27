@@ -17,4 +17,4 @@ outputs of DCGAN after 100 epochs:**
 
 The "same output" problem comes from the input range of the random vector "z". Changing from \[0,1] to \[-1,1] solves everything.
 
-Besides, the probability of descriminator judging real images as real is always high as 0.9 or so through the training process.
+Besides, the probability of descriminator judging real images as real is always high as 0.9 through the training process which means the discriminator has a really low chance to be fooled by generator, yet the generated images look "real" enough.
