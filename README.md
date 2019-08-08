@@ -1,3 +1,5 @@
+For training, directly run "gan.py". The cifar dataset is placed under the same folder(firectly unzip at './').
+
 generative adversial network using tf.nn from scratch on cifar10
 ![loss curve2](https://github.com/mummy2358/gan/blob/master/prob_40000.png)
 
